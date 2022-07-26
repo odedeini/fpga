@@ -53,7 +53,9 @@ module de10lite_scr1 (
     `endif//SCR1_DBG_EN
     // === UART ============================================
     output logic                    UART_TXD,    // <- UART
-    input  logic                    UART_RXD     // -> UART
+    output logic                    UART_TXD_2,    // <- UART
+    input  logic                    UART_RXD,     // -> UART
+    input  logic                    UART_RXD_2     // -> UART
 );
 
 
@@ -62,6 +64,8 @@ module de10lite_scr1 (
 //=======================================================
 //  Signals / Variables declarations
 //=======================================================
+logic [9:0]                         debug_led;
+logic [9:0]                         debug_led_2;
 logic                               pwrup_rst_n;
 logic                               cpu_clk;
 logic                               extn_rst_in_n;
@@ -73,6 +77,19 @@ logic                               soc_rst_n;
 logic                               cpu_rst_n;
 `ifdef SCR1_DBG_EN
 logic                               sys_rst_n;
+`endif // SCR1_DBG_EN
+
+logic                               pwrup_rst_n_2;
+logic                               cpu_clk_2;
+logic                               extn_rst_in_n_2;
+logic                               extn_rst_n_2;
+logic [1:0]                         extn_rst_n_sync_2;
+logic                               hard_rst_n_2;
+logic [3:0]                         hard_rst_n_count_2;
+logic                               soc_rst_n_2;
+logic                               cpu_rst_n_2;
+`ifdef SCR1_DBG_EN
+logic                               sys_rst_n_2;
 `endif // SCR1_DBG_EN
 
 // --- SCR1 ---------------------------------------------
@@ -101,6 +118,31 @@ logic [31:0]                        scr1_irq;
 logic                               scr1_irq;
 `endif // SCR1_IPIC_EN
 
+logic [3:0]                         ahb_imem_hprot_2;
+logic [2:0]                         ahb_imem_hburst_2;
+logic [2:0]                         ahb_imem_hsize_2;
+logic [1:0]                         ahb_imem_htrans_2;
+logic [SCR1_AHB_WIDTH-1:0]          ahb_imem_haddr_2;
+logic                               ahb_imem_hready_2;
+logic [SCR1_AHB_WIDTH-1:0]          ahb_imem_hrdata_2;
+logic                               ahb_imem_hresp_2;
+//
+logic [3:0]                         ahb_dmem_hprot_2;
+logic [2:0]                         ahb_dmem_hburst_2;
+logic [2:0]                         ahb_dmem_hsize_2;
+logic [1:0]                         ahb_dmem_htrans_2;
+logic [SCR1_AHB_WIDTH-1:0]          ahb_dmem_haddr_2;
+logic                               ahb_dmem_hwrite_2;
+logic [SCR1_AHB_WIDTH-1:0]          ahb_dmem_hwdata_2;
+logic                               ahb_dmem_hready_2;
+logic [SCR1_AHB_WIDTH-1:0]          ahb_dmem_hrdata_2;
+logic                               ahb_dmem_hresp_2;
+`ifdef SCR1_IPIC_EN
+logic [31:0]                        scr1_irq_2;
+`else
+logic                               scr1_irq_2;
+`endif // SCR1_IPIC_EN
+
 // --- JTAG ---------------------------------------------
 `ifdef SCR1_DBG_EN
 logic                               scr1_jtag_trst_n;
@@ -109,6 +151,15 @@ logic                               scr1_jtag_tms;
 logic                               scr1_jtag_tdi;
 logic                               scr1_jtag_tdo_en;
 logic                               scr1_jtag_tdo_int;
+`endif // SCR1_DBG_EN
+
+`ifdef SCR1_DBG_EN
+logic                               scr1_jtag_trst_n_2;
+logic                               scr1_jtag_tck_2;
+logic                               scr1_jtag_tms_2;
+logic                               scr1_jtag_tdi_2;
+logic                               scr1_jtag_tdo_en_2;
+logic                               scr1_jtag_tdo_int_2;
 `endif // SCR1_DBG_EN
 
 // --- AHB-Avalon Bridge --------------------------------
@@ -132,6 +183,26 @@ logic                               avl_dmem_readdatavalid;
 logic [SCR1_AHB_WIDTH-1:0]          avl_dmem_readdata;
 logic [1:0]                         avl_dmem_response;
 
+logic                               avl_imem_write_2;
+logic                               avl_imem_read_2;
+logic                               avl_imem_waitrequest_2;
+logic [SCR1_AHB_WIDTH-1:0]          avl_imem_address_2;
+logic [3:0]                         avl_imem_byteenable_2;
+logic [SCR1_AHB_WIDTH-1:0]          avl_imem_writedata_2;
+logic                               avl_imem_readdatavalid_2;
+logic [SCR1_AHB_WIDTH-1:0]          avl_imem_readdata_2;
+logic [1:0]                         avl_imem_response_2;
+//
+logic                               avl_dmem_write_2;
+logic                               avl_dmem_read_2;
+logic                               avl_dmem_waitrequest_2;
+logic [SCR1_AHB_WIDTH-1:0]          avl_dmem_address_2;
+logic [3:0]                         avl_dmem_byteenable_2;
+logic [SCR1_AHB_WIDTH-1:0]          avl_dmem_writedata_2;
+logic                               avl_dmem_readdatavalid_2;
+logic [SCR1_AHB_WIDTH-1:0]          avl_dmem_readdata_2;
+logic [1:0]                         avl_dmem_response_2;
+
 // --- UART ---------------------------------------------
 //logic                             uart_rxd;   // -> UART
 //logic                             uart_txd;   // <- UART
@@ -151,6 +222,22 @@ logic                               uart_wb_ack;
 logic  [7:0]                        uart_wb_dat;
 logic                               uart_read_vd;
 
+logic                               uart_rts_n_2; // <- UART
+logic                               uart_dtr_n_2; // <- UART
+logic                               uart_irq_2;
+
+logic [31:0]                        uart_readdata_2;
+logic                               uart_readdatavalid_2;
+logic [31:0]                        uart_writedata_2;
+logic  [4:0]                        uart_address_2;
+logic                               uart_write_2;
+logic                               uart_read_2;
+logic                               uart_waitrequest_2;
+
+logic                               uart_wb_ack_2;
+logic  [7:0]                        uart_wb_dat_2;
+logic                               uart_read_vd_2;
+
 // --- PIO ----------------------------------------------
 logic [ 7:0]                        pio_led;
 logic [15:0]                        pio_hex_1_0;
@@ -163,10 +250,20 @@ logic [31:0]                        rtc_counter;
 logic                               tick_2Hz;
 logic                               heartbeat;
 
+logic [31:0]                        rtc_counter_2;
+logic                               tick_2Hz_2;
+logic                               heartbeat_2;
+
 //=======================================================
 //  Resets
 //=======================================================
 assign extn_rst_in_n    = KEY[0]
+`ifdef SCR1_DBG_EN
+                        & JTAG_SRST_N
+`endif // SCR1_DBG_EN
+;
+
+assign extn_rst_in_n_2    = KEY[0]
 `ifdef SCR1_DBG_EN
                         & JTAG_SRST_N
 `endif // SCR1_DBG_EN
@@ -182,6 +279,17 @@ begin
     end
 end
 assign extn_rst_n = extn_rst_n_sync[1];
+
+always_ff @(posedge cpu_clk_2, negedge pwrup_rst_n_2)
+begin
+    if (~pwrup_rst_n_2) begin
+        extn_rst_n_sync_2     <= '0;
+    end else begin
+        extn_rst_n_sync_2[0]  <= extn_rst_in_n_2;
+        extn_rst_n_sync_2[1]  <= extn_rst_n_sync_2[0];
+    end
+end
+assign extn_rst_n_2 = extn_rst_n_sync_2[1];
 
 always_ff @(posedge cpu_clk, negedge pwrup_rst_n)
 begin
@@ -212,10 +320,45 @@ begin
     end
 end
 
+always_ff @(posedge cpu_clk_2, negedge pwrup_rst_n_2)
+begin
+    if (~pwrup_rst_n_2) begin
+        hard_rst_n_2          <= 1'b0;
+        hard_rst_n_count_2    <= '0;
+    end else begin
+        if (hard_rst_n_2) begin
+            // hard_rst_n_2 == 1 - de-asserted
+            hard_rst_n_2          <= extn_rst_n_2;
+            hard_rst_n_count_2    <= '0;
+        end else begin
+            // hard_rst_n_2 == 0 - asserted
+            if (extn_rst_n_2) begin
+                if (hard_rst_n_count_2 == '1) begin
+                    // If extn_rst_n_2 = 1 at least 16 clocks,
+                    // de-assert hard_rst_n_2
+                    hard_rst_n_2          <= 1'b1;
+                end else begin
+                    hard_rst_n_count_2    <= hard_rst_n_count_2 + 1'b1;
+                end
+            end else begin
+                // If extn_rst_n is asserted within 16-cycles window -> start
+                // counting from the beginning
+                hard_rst_n_count_2    <= '0;
+            end
+        end
+    end
+end
+
 `ifdef SCR1_DBG_EN
 assign soc_rst_n = sys_rst_n;
 `else
 assign soc_rst_n = hard_rst_n;
+`endif // SCR1_DBG_EN
+
+`ifdef SCR1_DBG_EN
+assign soc_rst_n_2 = sys_rst_n_2;
+`else
+assign soc_rst_n_2 = hard_rst_n_2;
 `endif // SCR1_DBG_EN
 
 //=======================================================
@@ -239,6 +382,24 @@ begin
     end
 end
 
+always_ff @(posedge cpu_clk_2, negedge hard_rst_n_2)
+begin
+    if (~hard_rst_n_2) begin
+        rtc_counter_2     <= '0;
+        tick_2Hz_2        <= 1'b0;
+    end
+    else begin
+        if (rtc_counter_2 == '0) begin
+            rtc_counter_2 <= (FPGA_DE10_CORE_CLK_FREQ/2);
+            tick_2Hz_2    <= 1'b1;
+        end
+        else begin
+            rtc_counter_2 <= rtc_counter_2 - 1'b1;
+            tick_2Hz_2    <= 1'b0;
+        end
+    end
+end
+
 always_ff @(posedge cpu_clk, negedge hard_rst_n)
 begin
     if (~hard_rst_n) begin
@@ -247,6 +408,18 @@ begin
     else begin
         if (tick_2Hz) begin
             heartbeat   <= ~heartbeat;
+        end
+    end
+end
+
+always_ff @(posedge cpu_clk_2, negedge hard_rst_n_2)
+begin
+    if (~hard_rst_n_2) begin
+        heartbeat_2       <= 1'b0;
+    end
+    else begin
+        if (tick_2Hz_2) begin
+            heartbeat_2   <= ~heartbeat_2;
         end
     end
 end
@@ -316,11 +489,80 @@ i_scr1 (
         .dmem_hrdata                (ahb_dmem_hrdata        ),
         .dmem_hresp                 (ahb_dmem_hresp         )
 );
+/* 
+scr1_top_ahb
+i_scr1_2 (
+        // Common
+        .pwrup_rst_n                (pwrup_rst_n_2            ),
+        .rst_n                      (hard_rst_n_2             ),
+        .cpu_rst_n                  (cpu_rst_n_2              ),
+        .test_mode                  (1'b0                   ),
+        .test_rst_n                 (1'b1                   ),
+        .clk                        (cpu_clk_2                ),
+        .rtc_clk                    (1'b0                   ),
+`ifdef SCR1_DBG_EN
+        .sys_rst_n_o                (sys_rst_n_2              ),
+        .sys_rdc_qlfy_o             (                       ),
+`endif // SCR1_DBG_EN
 
+        // Fuses
+        .fuse_mhartid               ('0                     ),
+`ifdef SCR1_DBG_EN
+        .fuse_idcode                (`SCR1_TAP_IDCODE       ),
+`endif // SCR1_DBG_EN
+
+        // IRQ
+`ifdef SCR1_IPIC_EN
+        .irq_lines                  (scr1_irq_2               ),
+`else
+        .ext_irq                    (scr1_irq_2             ),
+`endif//SCR1_IPIC_EN
+        .soft_irq                   ('0                     ),
+
+`ifdef SCR1_DBG_EN
+        // Debug Interface - JTAG I/F
+        .trst_n                     (scr1_jtag_trst_n_2       ),
+        .tck                        (scr1_jtag_tck_2          ),
+        .tms                        (scr1_jtag_tms_2          ),
+        .tdi                        (scr1_jtag_tdi_2          ),
+        .tdo                        (scr1_jtag_tdo_int_2      ),
+        .tdo_en                     (scr1_jtag_tdo_en_2       ),
+`endif//SCR1_DBG_EN
+
+        // Instruction Memory Interface
+        .imem_hprot                 (ahb_imem_hprot_2         ),
+        .imem_hburst                (ahb_imem_hburst_2        ),
+        .imem_hsize                 (ahb_imem_hsize_2         ),
+        .imem_htrans                (ahb_imem_htrans_2        ),
+        .imem_hmastlock             (                       ),
+        .imem_haddr                 (ahb_imem_haddr_2         ),
+        .imem_hready                (ahb_imem_hready_2        ),
+        .imem_hrdata                (ahb_imem_hrdata_2        ),
+        .imem_hresp                 (ahb_imem_hresp_2         ),
+        // Data Memory Interface
+        .dmem_hprot                 (ahb_dmem_hprot_2         ),
+        .dmem_hburst                (ahb_dmem_hburst_2        ),
+        .dmem_hsize                 (ahb_dmem_hsize_2         ),
+        .dmem_htrans                (ahb_dmem_htrans_2        ),
+        .dmem_hmastlock             (                       ),
+        .dmem_haddr                 (ahb_dmem_haddr_2         ),
+        .dmem_hwrite                (ahb_dmem_hwrite_2        ),
+        .dmem_hwdata                (ahb_dmem_hwdata_2        ),
+        .dmem_hready                (ahb_dmem_hready_2        ),
+        .dmem_hrdata                (ahb_dmem_hrdata_2        ),
+        .dmem_hresp                 (ahb_dmem_hresp_2         )
+);
+ */
 `ifdef SCR1_IPIC_EN
 assign scr1_irq = {31'd0, uart_irq};
 `else
 assign scr1_irq = uart_irq;
+`endif // SCR1_IPIC_EN
+
+`ifdef SCR1_IPIC_EN
+assign scr1_irq_2 = {31'd0, uart_irq_2};
+`else
+assign scr1_irq_2 = uart_irq_2;
 `endif // SCR1_IPIC_EN
 
 //==========================================================
@@ -331,12 +573,24 @@ if (~soc_rst_n)             uart_read_vd <= '0;
     else if (uart_wb_ack)   uart_read_vd <= '0;
     else if (uart_read)     uart_read_vd <= '1;
 
+always_ff @(posedge cpu_clk_2, negedge soc_rst_n_2)
+if (~soc_rst_n_2)             uart_read_vd_2 <= '0;
+    else if (uart_wb_ack_2)   uart_read_vd_2 <= '0;
+    else if (uart_read_2)     uart_read_vd_2 <= '1;
+
 always_ff @(posedge cpu_clk) begin
     uart_readdatavalid  <= uart_wb_ack & uart_read_vd;
     uart_readdata       <= {24'd0,uart_wb_dat};
 end
 
+always_ff @(posedge cpu_clk_2) begin
+    uart_readdatavalid_2  <= uart_wb_ack_2 & uart_read_vd_2;
+    uart_readdata_2       <= {24'd0,uart_wb_dat_2};
+end
+
 assign uart_waitrequest = ~uart_wb_ack;
+
+assign uart_waitrequest_2 = ~uart_wb_ack_2;
 
 uart_top
 i_uart(
@@ -363,6 +617,35 @@ i_uart(
     .ri_pad_i       ('1                     ),
     .dcd_pad_i      ('1                     )
 );
+/* 
+uart_top
+i_uart_2(
+    .wb_clk_i       (cpu_clk_2                ),
+    // Wishbone signals
+    .wb_rst_i       (~soc_rst_n_2             ),
+    .wb_adr_i       (uart_address_2[4:2]      ),
+    .wb_dat_i       (uart_writedata_2[7:0]    ),
+    .wb_dat_o       (uart_wb_dat_2            ),
+    .wb_we_i        (uart_write_2             ),
+    .wb_stb_i       (uart_read_vd_2|uart_write_2),
+    .wb_cyc_i       (uart_read_vd_2|uart_write_2),
+    .wb_ack_o       (uart_wb_ack_2            ),
+    .wb_sel_i       (4'd1                   ),
+    .int_o          (uart_irq_2               ),
+
+    .stx_pad_o      (UART_TXD_2               ),
+    .srx_pad_i      (UART_RXD_2               ),
+
+    .rts_pad_o      (uart_rts_n_2             ),
+    .cts_pad_i      (uart_rts_n_2             ),
+    .dtr_pad_o      (uart_dtr_n_2             ),
+    .dsr_pad_i      (uart_dtr_n_2             ),
+    .ri_pad_i       ('1                     ),
+    .dcd_pad_i      ('1                     )
+);
+
+ */
+
 
 //==========================================================
 // AHB I-MEM Bridge
@@ -384,14 +667,84 @@ i_ahb_imem (
         // ahb slave side
         .HRDATA                     (ahb_imem_hrdata        ),
         .HRESP                      (ahb_imem_hresp         ),
-        .HSIZE                      (ahb_imem_hsize         ),
-        .HTRANS                     (ahb_imem_htrans        ),
-        .HPROT                      (ahb_imem_hprot         ),
-        .HADDR                      (ahb_imem_haddr         ),
-        .HWDATA                     ('0                     ),
-        .HWRITE                     ('0                     ),
+        .HSIZE                      (ahb_imem_hsize        ),
+        .HTRANS                     (ahb_imem_htrans       ),
+        .HPROT                      (ahb_imem_hprot        ),
+        .HADDR                      (ahb_imem_haddr        ),
+        .HWDATA                     ('0                                 ),
+        .HWRITE                     ('0                                 ),
         .HREADY                     (ahb_imem_hready        )
 );
+/* 
+ahb_avalon_bridge
+i_ahb_imem_2 (
+        // avalon master side
+        .clk                        (cpu_clk_2                ),
+        .reset_n                    (soc_rst_n_2              ),
+        .write                      (avl_imem_write_2         ),
+        .read                       (avl_imem_read_2          ),
+        .waitrequest                (avl_imem_waitrequest_2   ),
+        .address                    (avl_imem_address_2       ),
+        .byteenable                 (avl_imem_byteenable_2    ),
+        .writedata                  (avl_imem_writedata_2     ),
+        .readdatavalid              (avl_imem_readdatavalid_2 ),
+        .readdata                   (avl_imem_readdata_2      ),
+        .response                   (avl_imem_response_2      ),
+        // ahb slave side
+        .HRDATA                     (ahb_imem_hrdata_2        ),
+        .HRESP                      (ahb_imem_hresp_2         ),
+        .HSIZE                      (ahb_imem_hsize_2         ),
+        .HTRANS                     (ahb_imem_htrans_2        ),
+        .HPROT                      (ahb_imem_hprot_2         ),
+        .HADDR                      (ahb_imem_haddr_2         ),
+        .HWDATA                     ('0                     ),
+        .HWRITE                     ('0                     ),
+        .HREADY                     (ahb_imem_hready_2        )
+);
+ */
+logic op;
+logic  [3:0] hsize;
+logic [1:0] htrans ;
+logic [3:0] hport ;
+logic [31:0] haddr ;
+logic hwrite;
+logic [31:0] hdata ;
+
+logic cond;
+assign hsize = cond ? 4'b111 : ahb_dmem_hsize;
+assign htrans = cond ? 2'b10 : ahb_dmem_htrans;
+assign hport = cond ? 4'b0010 : ahb_dmem_hprot;
+assign haddr = cond ? 32'hf00002b0 : ahb_dmem_haddr;
+assign hwrite = cond;
+assign hwdata = cond ? 32'h12345678 : 32'h0;
+always_ff @(posedge cpu_clk ) begin
+	
+	if(SW[9]) begin
+		debug_led <= 10'b0;
+		debug_led_2 <= 10'b0;
+		op <= 1'b1;
+		
+	end
+	else if(SW[8]) begin
+		debug_led <= 10'b1111111111;
+		debug_led_2 <= 10'b1111111111;
+	end
+	
+	else if((SW[7]) & (op))begin
+		cond <= 1'b1;
+		debug_led[3] <= 1'b1;
+		
+		if(ahb_dmem_hready)
+			op <= 1'b0;
+	end
+	else begin
+		cond <= 1'b0;
+		debug_led[3] <= 1'b0;
+	end
+	
+end
+
+
 
 //==========================================================
 // AHB I-MEM Bridge
@@ -413,14 +766,40 @@ i_ahb_dmem (
         // ahb slave side
         .HRDATA                     (ahb_dmem_hrdata        ),
         .HRESP                      (ahb_dmem_hresp         ),
-        .HSIZE                      (ahb_dmem_hsize         ),
-        .HTRANS                     (ahb_dmem_htrans        ),
-        .HPROT                      (ahb_dmem_hprot         ),
-        .HADDR                      (ahb_dmem_haddr         ),
-        .HWDATA                     (ahb_dmem_hwdata        ),
-        .HWRITE                     (ahb_dmem_hwrite        ),
+        .HSIZE                      (hsize          ),
+        .HTRANS                     (htrans         ),
+        .HPROT                      (hport          ),
+        .HADDR                      (haddr          ),
+        .HWDATA                     (hwdata         ),
+        .HWRITE                     (hwrite         ),
         .HREADY                     (ahb_dmem_hready        )
 );
+/* 
+ahb_avalon_bridge
+i_ahb_dmem_2 (
+        // avalon master side
+        .clk                        (cpu_clk_2                ),
+        .reset_n                    (soc_rst_n_2              ),
+        .write                      (avl_dmem_write_2         ),
+        .read                       (avl_dmem_read_2          ),
+        .waitrequest                (avl_dmem_waitrequest_2   ),
+        .address                    (avl_dmem_address_2       ),
+        .byteenable                 (avl_dmem_byteenable_2    ),
+        .writedata                  (avl_dmem_writedata_2     ),
+        .readdatavalid              (avl_dmem_readdatavalid_2 ),
+        .readdata                   (avl_dmem_readdata_2      ),
+        .response                   (avl_dmem_response_2      ),
+        // ahb slave side
+        .HRDATA                     (ahb_dmem_hrdata_2        ),
+        .HRESP                      (ahb_dmem_hresp_2         ),
+        .HSIZE                      (ahb_dmem_hsize_2         ),
+        .HTRANS                     (ahb_dmem_htrans_2        ),
+        .HPROT                      (ahb_dmem_hprot_2         ),
+        .HADDR                      (ahb_dmem_haddr_2         ),
+        .HWDATA                     (ahb_dmem_hwdata_2        ),
+        .HWRITE                     (ahb_dmem_hwrite_2        ),
+        .HREADY                     (ahb_dmem_hready_2        )
+); */
 
 //=======================================================
 //  FPGA Platform's System-on-Programmable-Chip (SOPC)
@@ -490,10 +869,79 @@ i_soc (
         .uart_debugaccess           (                       ),
         // PTFM IDs
         .soc_id_export              (FPGA_DE10_SOC_ID       ),
-        .bld_id_export              (FPGA_DE10_BLD_ID       ),
+        .bld_id_export              (32'b1       ),
         .core_clk_freq_export       (FPGA_DE10_CORE_CLK_FREQ)
 );
 
+/* de10lite_sopc
+i_soc_2 (
+        // CLOCKs & RESETs
+        .osc_50_clk                 (MAX10_CLK2_50          ),
+        .cpu_clk_out_clk            (cpu_clk_2                ),
+        .sdram_clk_out_clk          (               ),
+        .pll_reset                  (1'b0                   ),
+        .pwrup_rst_n_out_export     (pwrup_rst_n_2            ),
+        .soc_reset_n                (soc_rst_n_2              ),
+        .cpu_rst_out_reset_n        (cpu_rst_n_2              ),
+        // SDRAM
+        .sdram_addr                 (              ),
+        .sdram_ba                   (                ),
+        .sdram_cas_n                (             ),
+        .sdram_cke                  (               ),
+        .sdram_cs_n                 (              ),
+        .sdram_dq                   (                ),
+        .sdram_dqm                  ( ),
+        .sdram_ras_n                (             ),
+        .sdram_we_n                 (              ),
+        // I-MEM Avalon Bus
+        .avl_imem_write             (avl_imem_write_2         ),
+        .avl_imem_read              (avl_imem_read_2          ),
+        .avl_imem_waitrequest       (avl_imem_waitrequest_2   ),
+        .avl_imem_debugaccess       (1'd0                   ),
+        .avl_imem_address           (avl_imem_address_2       ),
+        .avl_imem_burstcount        (1'd1                   ),
+        .avl_imem_byteenable        (avl_imem_byteenable_2    ),
+        .avl_imem_writedata         (avl_imem_writedata_2     ),
+        .avl_imem_readdatavalid     (avl_imem_readdatavalid_2 ),
+        .avl_imem_readdata          (avl_imem_readdata_2      ),
+        .avl_imem_response          (avl_imem_response_2      ),
+        // D-MEM Avalon Bus
+        .avl_dmem_write             (avl_dmem_write_2         ),
+        .avl_dmem_read              (avl_dmem_read_2          ),
+        .avl_dmem_waitrequest       (avl_dmem_waitrequest_2   ),
+        .avl_dmem_debugaccess       (1'd0                   ),
+        .avl_dmem_address           (avl_dmem_address_2       ),
+        .avl_dmem_burstcount        (1'd1                   ),
+        .avl_dmem_byteenable        (avl_dmem_byteenable_2    ),
+        .avl_dmem_writedata         (avl_dmem_writedata_2     ),
+        .avl_dmem_readdatavalid     (avl_dmem_readdatavalid_2 ),
+        .avl_dmem_readdata          (avl_dmem_readdata_2      ),
+        .avl_dmem_response          (avl_dmem_response_2      ),
+        // PIO HEX LEDs
+        .pio_hex_1_0_export         (            ),
+        .pio_hex_3_2_export         (            ),
+        .pio_hex_5_4_export         (            ),
+        // PIO LEDs
+        .pio_led_export             (                ),
+        // PIO SWITCHes
+        .pio_sw_export              (pio_sw                 ),
+        // UART
+        .uart_waitrequest           (uart_waitrequest_2       ),
+        .uart_readdata              (uart_readdata_2          ),
+        .uart_readdatavalid         (uart_readdatavalid_2     ),
+        .uart_burstcount            (                       ),
+        .uart_writedata             (uart_writedata_2         ),
+        .uart_address               (uart_address_2           ),
+        .uart_write                 (uart_write_2             ),
+        .uart_read                  (uart_read_2              ),
+        .uart_byteenable            (                       ),
+        .uart_debugaccess           (                       ),
+        // PTFM IDs
+        .soc_id_export              (FPGA_DE10_SOC_ID       ),
+        .bld_id_export              (32'b10       ),
+        .core_clk_freq_export       (FPGA_DE10_CORE_CLK_FREQ)
+);
+ */
 //==========================================================
 // JTAG
 //==========================================================
@@ -505,12 +953,27 @@ assign scr1_jtag_tdi        = JTAG_TDI;
 assign JTAG_TDO             = (scr1_jtag_tdo_en) ? scr1_jtag_tdo_int : 1'bZ;
 `endif // SCR1_DBG_EN
 
+`ifdef SCR1_DBG_EN
+assign scr1_jtag_trst_n_2     = JTAG_TRST_N;
+assign scr1_jtag_tck_2        = JTAG_TCK;
+assign scr1_jtag_tms_2        = JTAG_TMS;
+assign scr1_jtag_tdi_2        = JTAG_TDI;
+`endif // SCR1_DBG_EN
+
 //==========================================================
 // LEDs
 //==========================================================
-assign LEDR[7:0]    =  pio_led;
-assign LEDR[8]      = ~hard_rst_n;
-assign LEDR[9]      =  heartbeat;
+//assign LEDR[7:0]    =  pio_led;
+assign LEDR[0]      = debug_led_2[0];
+assign LEDR[1]      = debug_led_2[1];
+assign LEDR[2]      = debug_led_2[2];
+assign LEDR[3]      = debug_led_2[3];
+assign LEDR[4]      =  debug_led[0];
+assign LEDR[5]      =  debug_led[1];
+assign LEDR[6]      =  debug_led[2];
+assign LEDR[7]      =  debug_led[3];
+//assign LEDR[8]      =  debug_led;
+//assign LEDR[9]      =  debug_led;
 assign {HEX1,HEX0}  =  pio_hex_1_0;
 assign {HEX3,HEX2}  =  pio_hex_3_2;
 assign {HEX5,HEX4}  =  pio_hex_5_4;
